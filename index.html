@@ -1,0 +1,1158 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DUMI Interactive Booth</title>
+  <style>
+    :root {
+      --primary: #a9d5ff;
+      --secondary: #dff1ff;
+      --accent: #6eb5ff;
+      --ink: #17324d;
+      --glass: rgba(255, 255, 255, 0.36);
+      --glass-strong: rgba(255, 255, 255, 0.58);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow: hidden;
+      color: var(--ink);
+      font-family: Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background:
+        radial-gradient(circle at 50% 18%, rgba(255,255,255,.88), rgba(223,241,255,.45) 22%, transparent 46%),
+        linear-gradient(145deg, #dff1ff 0%, #a9d5ff 48%, #87c4ff 100%);
+    }
+
+    button {
+      border: 0;
+      color: inherit;
+      font: inherit;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      position: relative;
+      min-height: 100vh;
+      isolation: isolate;
+    }
+
+    .logo {
+      position: fixed;
+      left: clamp(28px, 4vw, 64px);
+      top: clamp(22px, 4vh, 48px);
+      z-index: 30;
+      width: clamp(42px, 6vw, 78px);
+      height: auto;
+      object-fit: contain;
+      object-position: left center;
+      filter: drop-shadow(0 10px 20px rgba(49, 90, 130, .18));
+    }
+
+    .screen {
+      display: none;
+      min-height: 100vh;
+      padding: clamp(78px, 10vh, 120px) clamp(30px, 6vw, 96px) 150px;
+    }
+
+    .screen.active { display: flex; }
+
+    .home {
+      align-items: center;
+      justify-content: center;
+    }
+
+    .center-stage {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: min(100%, 1200px);
+      height: min(72vh, 720px);
+      min-height: 580px;
+    }
+
+    .dumi {
+      position: relative;
+      width: clamp(390px, 37vw, 650px);
+      height: clamp(520px, 62vh, 720px);
+      animation: float 4.8s ease-in-out infinite;
+      transform-origin: center bottom;
+    }
+
+    .dumi.talking .mouth { height: 22px; border-radius: 0 0 40px 40px; animation: talk 460ms ease-in-out infinite; }
+    .dumi.happy { filter: drop-shadow(0 28px 42px rgba(110,181,255,.35)); }
+    .dumi.sleepy { animation-duration: 7s; }
+
+    .ear, .head, .body, .arm, .paw {
+      position: absolute;
+      background: linear-gradient(145deg, #fff 0%, #f6fbff 52%, #e7f4ff 100%);
+      box-shadow: inset -18px -28px 42px rgba(149, 196, 235, .15), 0 24px 70px rgba(74, 126, 178, .22);
+    }
+
+    .ear {
+      top: 0;
+      width: 23%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+    }
+
+    .ear::after {
+      content: "";
+      position: absolute;
+      inset: 24%;
+      border-radius: 50%;
+      background: #cfeaff;
+    }
+
+    .ear.left { left: 25%; }
+    .ear.right { right: 25%; }
+
+    .head {
+      left: 50%;
+      top: 7%;
+      width: 58%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+
+    .eye {
+      position: absolute;
+      top: 30%;
+      width: 7%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: #07111c;
+      z-index: 4;
+      animation: blink 5.2s infinite;
+    }
+
+    .eye.left { left: 37%; }
+    .eye.right { right: 37%; }
+
+    .cheek {
+      position: absolute;
+      top: 34%;
+      width: 12%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: #a9d5ff;
+      z-index: 3;
+    }
+
+    .cheek.left { left: 30%; }
+    .cheek.right { right: 30%; }
+
+    .nose {
+      position: absolute;
+      left: 50%;
+      top: 37%;
+      z-index: 4;
+      width: 13%;
+      aspect-ratio: 1.35;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #3b4652, #05080c 65%);
+      transform: translateX(-50%);
+    }
+
+    .mouth {
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      z-index: 3;
+      width: 20%;
+      height: 18px;
+      border-bottom: 5px solid #07111c;
+      border-radius: 0 0 80px 80px;
+      transform: translateX(-50%);
+    }
+
+    .body {
+      left: 50%;
+      bottom: 2%;
+      z-index: 1;
+      width: 50%;
+      height: 46%;
+      border-radius: 48% 48% 42% 42%;
+      transform: translateX(-50%);
+    }
+
+    .belly {
+      position: absolute;
+      left: 50%;
+      bottom: 13%;
+      z-index: 2;
+      width: 25%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: #cfeaff;
+      transform: translateX(-50%);
+    }
+
+    .arm.wave {
+      left: 10%;
+      top: 31%;
+      z-index: 1;
+      width: 18%;
+      height: 36%;
+      border-radius: 999px;
+      transform: rotate(-19deg);
+      transform-origin: bottom center;
+      animation: wave 2.4s ease-in-out infinite;
+    }
+
+    .arm.side {
+      right: 14%;
+      top: 46%;
+      z-index: 0;
+      width: 16%;
+      height: 34%;
+      border-radius: 999px;
+      transform: rotate(15deg);
+    }
+
+    .paw {
+      left: 1%;
+      top: 26%;
+      z-index: 5;
+      display: grid;
+      place-items: center;
+      width: 21%;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      font-size: clamp(34px, 4vw, 58px);
+      animation: pawWave 2.4s ease-in-out infinite;
+    }
+
+    .food {
+      position: absolute;
+      left: 15%;
+      top: 31%;
+      z-index: 7;
+      display: grid;
+      place-items: center;
+      width: 76px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: rgba(255,255,255,.72);
+      box-shadow: 0 18px 44px rgba(70,126,184,.18);
+      font-size: 44px;
+      opacity: 0;
+      transform: translate3d(0, 0, 0) scale(.65);
+      pointer-events: none;
+    }
+
+    .dumi.eating .food {
+      opacity: 1;
+      animation: eatMove 1.35s ease-in-out infinite;
+    }
+
+    .dumi.eating .mouth {
+      height: 24px;
+      border-bottom-width: 0;
+      border-radius: 0 0 40px 40px;
+      background: #07111c;
+      animation: chew .38s ease-in-out infinite;
+    }
+
+    .dialogue {
+      position: absolute;
+      left: 50%;
+      bottom: 18%;
+      z-index: 8;
+      width: min(650px, 72vw);
+      min-height: 92px;
+      padding: 20px 30px;
+      border: 1px solid rgba(255,255,255,.72);
+      border-radius: 20px;
+      background: rgba(255,255,255,.42);
+      box-shadow: 0 24px 70px rgba(72, 128, 190, .18);
+      backdrop-filter: blur(24px) saturate(1.18);
+      transform: translateX(-50%);
+      white-space: pre-line;
+      line-height: 1.75;
+      font-size: clamp(17px, 1.25vw, 23px);
+    }
+
+    .voice {
+      position: absolute;
+      left: 50%;
+      bottom: 8.6%;
+      z-index: 9;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 48px;
+      padding: 10px 22px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.14);
+      color: rgba(255,255,255,.95);
+      text-shadow: 0 2px 14px rgba(62, 116, 170, .3);
+      transform: translateX(-50%);
+    }
+
+    .waveform {
+      display: none;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .voice.listening .waveform { display: flex; }
+
+    .bar {
+      width: 4px;
+      border-radius: 99px;
+      background: #fff;
+      animation: meter .7s ease-in-out infinite;
+    }
+
+    .bar:nth-child(1) { height: 12px; }
+    .bar:nth-child(2) { height: 22px; animation-delay: .12s; }
+    .bar:nth-child(3) { height: 30px; animation-delay: .24s; }
+    .bar:nth-child(4) { height: 18px; animation-delay: .36s; }
+
+    .bottom-nav {
+      position: fixed;
+      left: 50%;
+      bottom: 34px;
+      z-index: 50;
+      display: flex;
+      gap: clamp(18px, 3vw, 44px);
+      transform: translateX(-50%);
+    }
+
+    .orb-button {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 8px;
+      width: clamp(88px, 8.2vw, 124px);
+      aspect-ratio: 1;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.52);
+      border-radius: 999px;
+      background: rgba(255,255,255,.26);
+      box-shadow: 0 24px 70px rgba(70, 126, 184, .18), inset 0 1px 0 rgba(255,255,255,.65);
+      backdrop-filter: blur(24px) saturate(1.25);
+      transition: transform .22s ease, background .22s ease;
+      text-align: center;
+      font-weight: 800;
+      font-size: clamp(12px, .9vw, 15px);
+    }
+
+    .orb-button:hover, .orb-button.active {
+      background: rgba(255,255,255,.48);
+      transform: translateY(-8px) scale(1.03);
+    }
+
+    .orb-button .icon {
+      font-size: clamp(25px, 2.2vw, 36px);
+      line-height: 1;
+    }
+
+    .floating {
+      position: fixed;
+      right: 34px;
+      bottom: 34px;
+      z-index: 55;
+      display: grid;
+      justify-items: end;
+      gap: 12px;
+    }
+
+    .floating-items {
+      display: none;
+      gap: 10px;
+    }
+
+    .floating.open .floating-items {
+      display: grid;
+    }
+
+    .snack-items {
+      display: grid;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 28px;
+      background: rgba(255,255,255,.22);
+      backdrop-filter: blur(18px);
+    }
+
+    .pill {
+      padding: 16px 22px;
+      border: 1px solid rgba(255,255,255,.56);
+      border-radius: 999px;
+      background: rgba(255,255,255,.36);
+      box-shadow: 0 18px 46px rgba(70, 126, 184, .18);
+      backdrop-filter: blur(22px);
+      font-weight: 800;
+    }
+
+    .panel {
+      border: 1px solid rgba(255,255,255,.66);
+      border-radius: 36px;
+      background: rgba(255,255,255,.32);
+      box-shadow: 0 26px 90px rgba(70, 126, 184, .2);
+      backdrop-filter: blur(26px) saturate(1.18);
+    }
+
+    .departments {
+      display: none;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+      gap: 28px;
+    }
+
+    .departments.active { display: grid; }
+
+    .media-panel {
+      padding: clamp(28px, 4vw, 54px);
+      overflow: hidden;
+    }
+
+    .eyebrow {
+      margin: 0 0 16px;
+      color: #226cae;
+      font-weight: 900;
+      font-size: clamp(16px, 1.4vw, 22px);
+    }
+
+    h1 {
+      margin: 0;
+      letter-spacing: 0;
+      font-size: clamp(44px, 5vw, 86px);
+      line-height: 1.02;
+    }
+
+    .lead {
+      margin: 20px 0 0;
+      max-width: 900px;
+      font-size: clamp(22px, 2vw, 34px);
+      line-height: 1.35;
+    }
+
+    .department-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: clamp(34px, 8vh, 80px);
+    }
+
+    .department-card {
+      min-height: 190px;
+      padding: 24px;
+      border: 1px solid rgba(255,255,255,.72);
+      border-radius: 28px;
+      background: rgba(255,255,255,.38);
+      box-shadow: 0 18px 54px rgba(70, 126, 184, .14);
+      text-align: left;
+    }
+
+    .department-card .emoji {
+      display: block;
+      margin-bottom: 20px;
+      font-size: 48px;
+    }
+
+    .department-card strong {
+      display: block;
+      font-size: clamp(18px, 1.35vw, 25px);
+    }
+
+    .department-card span:last-child {
+      display: block;
+      margin-top: 10px;
+      color: #42627f;
+      line-height: 1.4;
+    }
+
+    .mini-dumi-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 32px;
+      text-align: center;
+    }
+
+    .mini-dumi {
+      position: relative;
+      width: 210px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #fff, #eaf7ff);
+      box-shadow: 0 24px 60px rgba(70,126,184,.18);
+    }
+
+    .mini-dumi::before, .mini-dumi::after {
+      content: "";
+      position: absolute;
+      top: 24px;
+      width: 54px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .mini-dumi::before { left: 24px; }
+    .mini-dumi::after { right: 24px; }
+
+    .mini-face {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-size: 70px;
+    }
+
+    .speech {
+      margin: 24px 0;
+      font-size: clamp(20px, 1.6vw, 27px);
+      line-height: 1.55;
+    }
+
+    .qr {
+      display: grid;
+      place-items: center;
+      width: 128px;
+      aspect-ratio: 1;
+      border-radius: 20px;
+      background:
+        linear-gradient(90deg, #17324d 10px, transparent 10px) 0 0 / 22px 22px,
+        linear-gradient(#17324d 10px, transparent 10px) 0 0 / 22px 22px,
+        #fff;
+      color: transparent;
+    }
+
+    .map-screen, .photo-screen, .language-screen {
+      align-items: center;
+      justify-content: center;
+    }
+
+    .map-panel {
+      width: min(1180px, 88vw);
+      height: min(680px, 68vh);
+      padding: 38px;
+    }
+
+    .map-area {
+      position: relative;
+      height: calc(100% - 86px);
+      margin-top: 28px;
+      overflow: hidden;
+      border-radius: 30px;
+      background: rgba(255,255,255,.4);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.55);
+    }
+
+    .map-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 18px;
+      border-radius: 30px;
+      background: rgba(255,255,255,.52);
+    }
+
+    .building {
+      position: absolute;
+      padding: 14px 20px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.78);
+      box-shadow: 0 18px 44px rgba(70,126,184,.18);
+      font-weight: 900;
+      transform: translate(-50%, -50%);
+    }
+
+    .photo-layout {
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .pose {
+      font-size: clamp(28px, 3vw, 54px);
+      font-weight: 1000;
+    }
+
+    .camera {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      width: min(1050px, 82vw);
+      height: min(560px, 55vh);
+      border-radius: 36px;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(255,255,255,.8), transparent 24%),
+        linear-gradient(135deg, rgba(23,50,77,.15), rgba(255,255,255,.42));
+      font-size: clamp(24px, 2.5vw, 44px);
+      font-weight: 1000;
+    }
+
+    .camera video, .camera canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .camera-placeholder {
+      z-index: 2;
+      display: grid;
+      gap: 14px;
+      justify-items: center;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .camera-actions {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .shutter {
+      width: 104px;
+      aspect-ratio: 1;
+      border: 10px solid rgba(255,255,255,.78);
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 22px 56px rgba(70,126,184,.26);
+      font-size: 36px;
+    }
+
+    .camera-action {
+      min-height: 64px;
+      padding: 0 28px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.7);
+      box-shadow: 0 16px 42px rgba(70,126,184,.16);
+      font-weight: 1000;
+    }
+
+    .camera-action:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .language-panel {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      width: min(760px, 82vw);
+      padding: 30px;
+    }
+
+    .language-panel button {
+      min-height: 130px;
+      border-radius: 28px;
+      background: rgba(255,255,255,.45);
+      font-size: clamp(26px, 2.8vw, 44px);
+      font-weight: 1000;
+    }
+
+    .effect {
+      position: absolute;
+      z-index: -1;
+      border-radius: 50%;
+      background: rgba(255,255,255,.2);
+      filter: blur(3px);
+      animation: drift 8s ease-in-out infinite;
+    }
+
+    .effect.one { left: 10%; top: 22%; width: 90px; height: 90px; }
+    .effect.two { right: 12%; top: 18%; width: 130px; height: 130px; animation-delay: -2s; }
+    .effect.three { right: 18%; bottom: 22%; width: 80px; height: 80px; animation-delay: -4s; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-18px); }
+    }
+
+    @keyframes wave {
+      0%, 100% { transform: rotate(-18deg); }
+      50% { transform: rotate(-32deg) translateY(-8px); }
+    }
+
+    @keyframes pawWave {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(-8deg) translateY(-8px); }
+    }
+
+    @keyframes blink {
+      0%, 92%, 100% { transform: scaleY(1); }
+      94%, 96% { transform: scaleY(.08); }
+    }
+
+    @keyframes talk {
+      0%, 100% { transform: translateX(-50%) scaleY(.55); }
+      50% { transform: translateX(-50%) scaleY(1.12); }
+    }
+
+    @keyframes meter {
+      0%, 100% { transform: scaleY(.45); }
+      50% { transform: scaleY(1); }
+    }
+
+    @keyframes eatMove {
+      0%, 100% { transform: translate3d(0, 0, 0) scale(.7) rotate(-8deg); }
+      45%, 62% { transform: translate3d(145px, -34px, 0) scale(.48) rotate(8deg); }
+    }
+
+    @keyframes chew {
+      0%, 100% { transform: translateX(-50%) scaleY(.5); }
+      50% { transform: translateX(-50%) scaleY(1.12); }
+    }
+
+    @keyframes drift {
+      0%, 100% { transform: translate3d(0,0,0); opacity: .45; }
+      50% { transform: translate3d(22px,-18px,0); opacity: .8; }
+    }
+
+    @media (max-width: 900px) {
+      body { overflow: auto; }
+      .screen { min-height: 100svh; padding-inline: 20px; }
+      .bottom-nav {
+        width: calc(100% - 24px);
+        gap: 10px;
+        justify-content: center;
+      }
+      .orb-button {
+        width: 68px;
+        font-size: 10px;
+      }
+      .departments.active {
+        grid-template-columns: 1fr;
+      }
+      .department-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .floating { right: 16px; bottom: 122px; }
+    }
+
+    @media (min-width: 901px) and (max-height: 820px) {
+      .screen {
+        padding-top: 68px;
+        padding-bottom: 112px;
+      }
+
+      .center-stage {
+        height: calc(100vh - 180px);
+        min-height: 500px;
+      }
+
+      .dumi {
+        width: 480px;
+        height: 520px;
+      }
+
+      .dialogue {
+        bottom: 15%;
+      }
+
+      .voice {
+        bottom: 6.5%;
+      }
+
+      .bottom-nav {
+        bottom: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <img class="logo" src="segyeong-logo.png" alt="세경고등학교 로고">
+    <span class="effect one"></span>
+    <span class="effect two"></span>
+    <span class="effect three"></span>
+
+    <section class="screen home active" data-screen="home">
+      <div class="center-stage">
+        <div class="dumi happy" id="dumi">
+          <span class="ear left"></span>
+          <span class="ear right"></span>
+          <span class="head"></span>
+          <span class="eye left"></span>
+          <span class="eye right"></span>
+          <span class="cheek left"></span>
+          <span class="cheek right"></span>
+          <span class="nose"></span>
+          <span class="mouth"></span>
+          <span class="food" id="food">🍎</span>
+          <span class="body"></span>
+          <span class="belly"></span>
+          <span class="arm wave"></span>
+          <span class="paw">👋</span>
+          <span class="arm side"></span>
+        </div>
+
+        <div class="dialogue" id="dialogue">듬이 :
+안녕하세요!
+무엇을 도와드릴까요?</div>
+
+        <button class="voice" id="voiceButton" type="button">
+          <span>🎙</span>
+          <span id="voiceText">터치하거나 말씀해주세요</span>
+          <span class="waveform" aria-hidden="true">
+            <i class="bar"></i><i class="bar"></i><i class="bar"></i><i class="bar"></i>
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <section class="screen departments" data-screen="departments">
+      <div class="panel media-panel">
+        <p class="eyebrow">학과 소개</p>
+        <h1 id="departmentTitle">컴퓨터공학과</h1>
+        <p class="lead" id="departmentLead">AI와 소프트웨어를 배우는 학과</p>
+        <div class="department-grid" id="departmentGrid"></div>
+      </div>
+      <aside class="panel mini-dumi-panel">
+        <div class="mini-dumi"><span class="mini-face">😊</span></div>
+        <p class="speech" id="departmentSpeech">컴퓨터공학과는 AI, 앱 개발, 데이터 분석, 클라우드 소프트웨어를 프로젝트 중심으로 배우는 학과예요!</p>
+        <div>
+          <div class="qr">QR</div>
+          <strong>자세히 보기</strong>
+        </div>
+      </aside>
+    </section>
+
+    <section class="screen map-screen" data-screen="map">
+      <div class="panel map-panel">
+        <p class="eyebrow">듬이가 주머니에서 지도를 꺼냈어요</p>
+        <h1>학교 지도</h1>
+        <div class="map-area" id="mapArea">
+          <img class="map-image" src="school-map.webp" alt="세경고등학교 학교 지도">
+        </div>
+      </div>
+    </section>
+
+    <section class="screen photo-screen photo-layout" data-screen="photo">
+      <div class="pose" id="poseText">듬이 : 브이 해볼까요?</div>
+      <div class="panel camera" id="cameraBox">
+        <video id="cameraVideo" autoplay playsinline muted></video>
+        <canvas id="photoCanvas" hidden></canvas>
+        <div class="camera-placeholder" id="cameraPlaceholder">
+          <strong>카메라 미리보기</strong>
+          <span>시작 버튼을 누르면 카메라 권한을 요청해요.</span>
+        </div>
+      </div>
+      <div class="camera-actions">
+        <button class="camera-action" id="startCamera" type="button">카메라 시작</button>
+        <button class="shutter" id="shutter" type="button">📸</button>
+        <button class="camera-action" id="downloadPhoto" type="button" disabled>사진 저장</button>
+      </div>
+    </section>
+
+    <section class="screen language-screen" data-screen="language">
+      <div class="panel language-panel">
+        <button type="button" data-lang="ko">한국어</button>
+        <button type="button" data-lang="en">English</button>
+        <button type="button" data-lang="zh">中文</button>
+        <button type="button" data-lang="ja">日本語</button>
+      </div>
+    </section>
+
+    <nav class="bottom-nav" aria-label="주요 메뉴">
+      <button class="orb-button" data-target="departments" type="button"><span class="icon">📚</span><span>학과 안내</span></button>
+      <button class="orb-button" data-target="chat" type="button"><span class="icon">💬</span><span>AI 대화</span></button>
+      <button class="orb-button" data-target="map" type="button"><span class="icon">🗺</span><span>학교 지도</span></button>
+      <button class="orb-button" data-target="photo" type="button"><span class="icon">📸</span><span>사진 촬영</span></button>
+      <button class="orb-button" data-target="language" type="button"><span class="icon">🌐</span><span>언어 변경</span></button>
+    </nav>
+
+    <div class="floating" id="floating">
+      <div class="floating-items">
+        <button class="pill" data-target="map" type="button">🗺 학교 지도</button>
+        <button class="pill" data-target="photo" type="button">📸 사진 촬영</button>
+        <button class="pill" id="snackToggle" type="button">🍽 간식</button>
+        <div class="snack-items" id="snackItems" hidden>
+          <button class="pill" data-snack="apple" type="button">🍎 사과</button>
+          <button class="pill" data-snack="banana" type="button">🍌 바나나</button>
+          <button class="pill" data-snack="milk" type="button">🥛 우유</button>
+        </div>
+        <button class="pill" type="button">🎮 이벤트 게임</button>
+        <button class="pill" type="button">🎁 랜덤 선물</button>
+      </div>
+      <button class="orb-button" id="floatingToggle" type="button"><span class="icon">✨</span><span>추가</span></button>
+    </div>
+  </main>
+
+  <script>
+    const departments = [
+      {
+        id: "cs",
+        name: "컴퓨터공학과",
+        tagline: "AI와 소프트웨어를 배우는 학과",
+        description: "컴퓨터공학과는 AI, 앱 개발, 데이터 분석, 클라우드 소프트웨어를 프로젝트 중심으로 배우는 학과예요!",
+        icon: "💻"
+      },
+      {
+        id: "ai",
+        name: "AI융합과",
+        tagline: "미래형 인공지능 실무 교육",
+        description: "AI융합과는 머신러닝, 로봇, 센서 데이터를 활용해 실제 문제를 해결하는 방법을 배워요.",
+        icon: "✨"
+      },
+      {
+        id: "design",
+        name: "디자인과",
+        tagline: "상상을 시각 경험으로 만드는 곳",
+        description: "디자인과는 브랜딩, 영상, UI 디자인을 익히며 학교 행사와 전시 작품을 직접 제작해요.",
+        icon: "🎨"
+      },
+      {
+        id: "game",
+        name: "게임콘텐츠과",
+        tagline: "플레이 가능한 세계를 만드는 학과",
+        description: "게임콘텐츠과는 기획, 그래픽, 프로그래밍을 함께 배우며 팀 단위 게임을 완성해요.",
+        icon: "🎮"
+      }
+    ];
+
+    const buildings = [
+      { name: "AI융합관", x: 62, y: 34, description: "이곳은 AI융합관입니다! 실습실과 프로젝트 공간이 있어요." },
+      { name: "본관", x: 36, y: 42, description: "이곳은 본관입니다. 행정실과 주요 교실이 모여 있어요." },
+      { name: "체육관", x: 24, y: 68, description: "이곳은 체육관입니다. 체육 수업과 학교 행사가 열려요." },
+      { name: "미디어실", x: 74, y: 66, description: "이곳은 미디어실입니다. 촬영과 편집 실습을 할 수 있어요." }
+    ];
+
+    const screens = document.querySelectorAll("[data-screen]");
+    const dialogue = document.querySelector("#dialogue");
+    const dumi = document.querySelector("#dumi");
+    const food = document.querySelector("#food");
+    const voiceButton = document.querySelector("#voiceButton");
+    const voiceText = document.querySelector("#voiceText");
+    const grid = document.querySelector("#departmentGrid");
+    const mapArea = document.querySelector("#mapArea");
+    const cameraVideo = document.querySelector("#cameraVideo");
+    const photoCanvas = document.querySelector("#photoCanvas");
+    const cameraPlaceholder = document.querySelector("#cameraPlaceholder");
+    const downloadPhoto = document.querySelector("#downloadPhoto");
+    let cameraStream;
+    let capturedPhotoUrl;
+    let idleTimer;
+
+    const languageMessages = {
+      ko: {
+        voice: "터치하거나 말씀해주세요",
+        hello: "안녕하세요!\n무엇을 도와드릴까요?",
+        selected: "한국어로 안내할게요."
+      },
+      en: {
+        voice: "Touch or speak to me",
+        hello: "Hello!\nHow can I help you today?",
+        selected: "I will guide you in English."
+      },
+      zh: {
+        voice: "请触摸或说话",
+        hello: "你好！\n需要我帮你什么？",
+        selected: "我会用中文为你介绍。"
+      },
+      ja: {
+        voice: "タッチするか話してください",
+        hello: "こんにちは！\n何をお手伝いしましょうか？",
+        selected: "日本語で案内します。"
+      }
+    };
+
+    function showScreen(name) {
+      screens.forEach((screen) => screen.classList.toggle("active", screen.dataset.screen === name));
+      document.querySelectorAll(".orb-button[data-target]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.target === name);
+      });
+      if (name !== "home") {
+        voiceButton.classList.remove("listening");
+        dumi.classList.remove("talking");
+      }
+      resetIdle();
+    }
+
+    function say(text, mood = "happy") {
+      dialogue.textContent = `듬이 :\n${text}`;
+      dumi.className = `dumi ${mood}`;
+      resetIdle();
+    }
+
+    function eatSnack(kind) {
+      const snacks = {
+        apple: { emoji: "🍎", text: "아삭아삭 사과를 먹고 있어요!\n상큼해서 힘이 나요." },
+        banana: { emoji: "🍌", text: "바나나를 냠냠 먹고 있어요!\n에너지가 충전됐어요." },
+        milk: { emoji: "🥛", text: "우유를 꿀꺽 마시고 있어요!\n튼튼해지는 느낌이에요." }
+      };
+      const snack = snacks[kind];
+      if (!snack) return;
+      food.textContent = snack.emoji;
+      dumi.className = "dumi eating";
+      dialogue.textContent = `듬이 :\n${snack.text}`;
+      clearTimeout(window.eatingTimer);
+      window.eatingTimer = setTimeout(() => {
+        dumi.className = "dumi happy";
+      }, 4200);
+      resetIdle();
+    }
+
+    async function startCamera() {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          say("이 브라우저에서는 카메라를 사용할 수 없어요.", "surprised");
+          return;
+        }
+        cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
+        cameraVideo.srcObject = cameraStream;
+        cameraPlaceholder.hidden = true;
+        say("카메라가 켜졌어요.\n마음에 드는 포즈를 해주세요!", "happy");
+      } catch (error) {
+        say("카메라 권한이 필요해요.\n허용을 누른 뒤 다시 시작해주세요.", "surprised");
+      }
+    }
+
+    function capturePhoto() {
+      if (!cameraVideo.srcObject || cameraVideo.readyState < 2) {
+        say("먼저 카메라 시작 버튼을 눌러주세요.", "thinking");
+        return;
+      }
+      const width = cameraVideo.videoWidth || 1280;
+      const height = cameraVideo.videoHeight || 720;
+      photoCanvas.width = width;
+      photoCanvas.height = height;
+      const context = photoCanvas.getContext("2d");
+      context.drawImage(cameraVideo, 0, 0, width, height);
+      context.fillStyle = "rgba(255,255,255,.88)";
+      context.fillRect(0, height - 130, width, 130);
+      context.fillStyle = "#17324d";
+      context.font = `bold ${Math.max(28, Math.round(width * .035))}px sans-serif`;
+      context.fillText("SE GYEONG HIGH SCHOOL  |  DUMI PHOTO", 42, height - 78);
+      context.font = `${Math.max(42, Math.round(width * .06))}px sans-serif`;
+      context.fillText("🐻‍❄️ ✨", width - 190, height - 54);
+      context.strokeStyle = "rgba(110,181,255,.95)";
+      context.lineWidth = 18;
+      context.strokeRect(9, 9, width - 18, height - 18);
+      photoCanvas.hidden = false;
+      capturedPhotoUrl = photoCanvas.toDataURL("image/png");
+      downloadPhoto.disabled = false;
+      say("촬영 완료!\n사진 저장 버튼으로 PNG 파일을 받을 수 있어요.", "happy");
+    }
+
+    function savePhoto() {
+      if (!capturedPhotoUrl) {
+        say("저장할 사진이 아직 없어요.\n먼저 촬영해주세요.", "thinking");
+        return;
+      }
+      const link = document.createElement("a");
+      link.href = capturedPhotoUrl;
+      link.download = `dumi-photo-${Date.now()}.png`;
+      link.click();
+      say("사진을 저장했어요!\nQR 생성 기능도 이어서 붙일 수 있어요.", "happy");
+    }
+
+    function resetIdle() {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        showScreen("home");
+        say("잠깐 스트레칭 중이었어요.\n학교를 안내해드릴까요?", "sleepy");
+      }, 30000);
+    }
+
+    departments.forEach((department) => {
+      const button = document.createElement("button");
+      button.className = "department-card";
+      button.type = "button";
+      button.innerHTML = `<span class="emoji">${department.icon}</span><strong>${department.name}</strong><span>${department.tagline}</span>`;
+      button.addEventListener("click", () => {
+        document.querySelector("#departmentTitle").textContent = department.name;
+        document.querySelector("#departmentLead").textContent = department.tagline;
+        document.querySelector("#departmentSpeech").textContent = department.description;
+        say(department.description, "talking");
+      });
+      grid.appendChild(button);
+    });
+
+    buildings.forEach((building) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "building";
+      button.style.left = `${building.x}%`;
+      button.style.top = `${building.y}%`;
+      button.textContent = building.name;
+      button.addEventListener("click", () => say(building.description, "talking"));
+      mapArea.appendChild(button);
+    });
+
+    document.querySelectorAll("[data-target]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const target = button.dataset.target;
+        if (target === "chat") {
+          showScreen("home");
+          voiceButton.classList.add("listening");
+          dumi.className = "dumi talking";
+          voiceText.textContent = "음성 인식 중";
+          say("듣고 있어요.\n편하게 말씀해주세요!", "talking");
+          return;
+        }
+        showScreen(target);
+        if (target === "departments") say("학과를 선택하면 제가 소개해드릴게요!", "happy");
+        if (target === "map") say("지도를 펼쳤어요.\n궁금한 건물을 눌러보세요!", "happy");
+        if (target === "photo") say("브이 해볼까요?\n멋진 네컷 사진을 만들어드릴게요!", "happy");
+      });
+    });
+
+    voiceButton.addEventListener("click", () => {
+      const listening = !voiceButton.classList.contains("listening");
+      voiceButton.classList.toggle("listening", listening);
+      dumi.className = listening ? "dumi talking" : "dumi happy";
+      voiceText.textContent = listening ? "음성 인식 중" : "터치하거나 말씀해주세요";
+      say(listening ? "듣고 있어요.\n컴퓨터공학과, 학교 지도, 사진 촬영처럼 말해보세요!" : "필요한 메뉴를 선택해주세요.", listening ? "talking" : "happy");
+    });
+
+    document.querySelector("#floatingToggle").addEventListener("click", () => {
+      document.querySelector("#floating").classList.toggle("open");
+      resetIdle();
+    });
+
+    document.querySelector("#snackToggle").addEventListener("click", () => {
+      const snackItems = document.querySelector("#snackItems");
+      snackItems.hidden = !snackItems.hidden;
+      say("간식을 골라주세요!\n사과, 바나나, 우유를 먹어볼게요.", "happy");
+    });
+
+    document.querySelectorAll("[data-snack]").forEach((button) => {
+      button.addEventListener("click", () => eatSnack(button.dataset.snack));
+    });
+
+    document.querySelectorAll("[data-lang]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const lang = button.dataset.lang;
+        const message = languageMessages[lang];
+        if (!message) return;
+        voiceText.textContent = message.voice;
+        dialogue.textContent = `듬이 :\n${message.selected}\n${message.hello}`;
+        dumi.className = "dumi happy";
+        showScreen("home");
+      });
+    });
+
+    document.querySelector("#startCamera").addEventListener("click", startCamera);
+
+    document.querySelector("#shutter").addEventListener("click", () => {
+      capturePhoto();
+    });
+
+    downloadPhoto.addEventListener("click", savePhoto);
+
+    ["click", "touchstart", "mousemove", "keydown"].forEach((eventName) => {
+      window.addEventListener(eventName, resetIdle, { passive: true });
+    });
+
+    resetIdle();
+  </script>
+</body>
+</html>
